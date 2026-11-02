@@ -5,25 +5,25 @@ you can also use **Use this template** on GitHub.
 
 ## What you get
 
-| Area | Choice | Why |
-| --- | --- | --- |
-| App | React 19, TypeScript (strict), Vite 8 | Current stack; strict types catch errors early |
-| Quality | ESLint (type-checked rules), Prettier, `tsc --noEmit` | One style; no unchecked `any` |
-| Unit tests | Vitest, Testing Library, V8 coverage of at least 70% | Tests what people see, not implementation details |
-| Contract tests | Pact consumer tests write `pacts/*.json` for the API to verify | The API can't break this app silently |
-| End-to-end | Playwright against the deployed app (`BASE_URL`); `@smoke` tests run in production | Real browser, real environment |
-| Serving | Unprivileged nginx on 8080 with CSP and security headers, `/healthz`, immutable asset caching | Secure defaults; works behind the platform's gateway |
-| Supply chain | `npm ci` from the lockfile, actions pinned by SHA, dependency review, Dependabot | Reproducible and reviewed dependencies |
+| Area           | Choice                                                                                        | Why                                                  |
+| -------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| App            | React 19, TypeScript (strict), Vite 8                                                         | Current stack; strict types catch errors early       |
+| Quality        | ESLint (type-checked rules), Prettier, `tsc --noEmit`                                         | One style; no unchecked `any`                        |
+| Unit tests     | Vitest, Testing Library, V8 coverage of at least 70%                                          | Tests what people see, not implementation details    |
+| Contract tests | Pact consumer tests write `pacts/*.json` for the API to verify                                | The API can't break this app silently                |
+| End-to-end     | Playwright against the deployed app (`BASE_URL`); `@smoke` tests run in production            | Real browser, real environment                       |
+| Serving        | Unprivileged nginx on 8080 with CSP and security headers, `/healthz`, immutable asset caching | Secure defaults; works behind the platform's gateway |
+| Supply chain   | `npm ci` from the lockfile, actions pinned by SHA, dependency review, Dependabot              | Reproducible and reviewed dependencies               |
 
 ## Checks and how the pipeline reads them
 
-| Check | Where | Required | Read by the Vrixel SDLC as |
-| --- | --- | --- | --- |
-| `unit` | `ci.yml` (lint, format, types, tests, build) | yes | the `unit` suite, counts and coverage from `unit / report` |
-| `contract` | `ci.yml` | yes | the `contract` suite |
-| `CodeQL` | default setup, enabled at provisioning | yes | the `sast` suite |
-| `dependency-review`, `image` | `ci.yml` | no | dependency diff; Dockerfile builds |
-| `integration / report`, `e2e / report`, `smoke / report` | `post-deploy.yml` | per stage | the stage's suite |
+| Check                                                    | Where                                        | Required  | Read by the Vrixel SDLC as                                 |
+| -------------------------------------------------------- | -------------------------------------------- | --------- | ---------------------------------------------------------- |
+| `unit`                                                   | `ci.yml` (lint, format, types, tests, build) | yes       | the `unit` suite, counts and coverage from `unit / report` |
+| `contract`                                               | `ci.yml`                                     | yes       | the `contract` suite                                       |
+| `CodeQL`                                                 | default setup, enabled at provisioning       | yes       | the `sast` suite                                           |
+| `dependency-review`, `image`                             | `ci.yml`                                     | no        | dependency diff; Dockerfile builds                         |
+| `integration / report`, `e2e / report`, `smoke / report` | `post-deploy.yml`                            | per stage | the stage's suite                                          |
 
 ## Develop
 

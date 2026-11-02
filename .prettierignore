@@ -1,0 +1,5 @@
+dist
+coverage
+reports
+pacts
+package-lock.json

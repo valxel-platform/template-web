@@ -1,0 +1,70 @@
+# Runs after the Vrixel SDLC deploys a commit: integration in dev, end-to-end in staging, smoke in
+# production. Results are posted on the deployed commit as "integration / report", "e2e / report"
+# and "smoke / report", which the pipeline's quality gates read.
+name: post-deploy
+
+on:
+  repository_dispatch:
+    types: [vrixel-deployed]
+  workflow_dispatch:
+    inputs:
+      stage:
+        {
+          description: "dev, staging or production",
+          required: true,
+          type: choice,
+          options: [dev, staging, production],
+        }
+      base_url: { description: "URL of the deployed app", required: true }
+      sha: { description: "Deployed commit", required: true }
+
+permissions:
+  contents: read
+
+concurrency:
+  group: post-deploy-${{ github.event.client_payload.stage || inputs.stage }}-${{ github.event.client_payload.sha || inputs.sha }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify ${{ github.event.client_payload.stage || inputs.stage }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      statuses: write
+    env:
+      STAGE: ${{ github.event.client_payload.stage || inputs.stage }}
+      BASE_URL: ${{ github.event.client_payload.base_url || inputs.base_url }}
+      REPORT_SHA: ${{ github.event.client_payload.sha || inputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.REPORT_SHA }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run the stage's suite
+        id: run
+        run: |
+          case "$STAGE" in
+            dev)        echo "suite=integration" >> "$GITHUB_OUTPUT"; npx playwright test ;;
+            staging)    echo "suite=e2e" >> "$GITHUB_OUTPUT"; npx playwright test ;;
+            production) echo "suite=smoke" >> "$GITHUB_OUTPUT"; npx playwright test --grep @smoke ;;
+            *) echo "Unknown stage $STAGE" >&2; exit 2 ;;
+          esac
+      - name: Report results
+        if: ${{ !cancelled() }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/report.py --context "${{ steps.run.outputs.suite }} / report" --junit reports/e2e-junit.xml
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ failure() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14

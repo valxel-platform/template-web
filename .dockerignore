@@ -1,0 +1,9 @@
+node_modules
+dist
+coverage
+reports
+pacts
+playwright-report
+test-results
+.git
+.github

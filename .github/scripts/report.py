@@ -8,7 +8,7 @@ smoke*) and reads counts and coverage from the summary text, e.g.
 it as a commit status. Standard library only; runs on any GitHub-hosted runner.
 
 usage: report.py --context "unit / report" --junit 'build/test-results/test/*.xml'
-                 [--jacoco build/reports/jacoco/test/jacocoTestReport.xml | --istanbul coverage/coverage-summary.json]
+                 [--jacoco jacocoTestReport.xml | --istanbul coverage-summary.json | --cobertura coverage.xml]
                  [--sha SHA] [--repo owner/name] [--url URL]
 """
 
@@ -44,6 +44,13 @@ def jacoco(path: str) -> float | None:
     return None
 
 
+def cobertura(path: str) -> float | None:
+    """coverage.py / pytest-cov XML (and other Cobertura producers)."""
+    if not path or not os.path.exists(path):
+        return None
+    return 100.0 * float(ET.parse(path).getroot().get("line-rate", 0))
+
+
 def istanbul(path: str) -> float | None:
     if not path or not os.path.exists(path):
         return None
@@ -56,6 +63,7 @@ def main() -> int:
     ap.add_argument("--junit", action="append", default=[])
     ap.add_argument("--jacoco")
     ap.add_argument("--istanbul")
+    ap.add_argument("--cobertura")
     ap.add_argument("--sha", default=os.environ.get("REPORT_SHA") or os.environ.get("GITHUB_SHA"))
     ap.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY"))
     ap.add_argument("--url", default=f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/"
@@ -63,7 +71,7 @@ def main() -> int:
     args = ap.parse_args()
 
     counts = junit(args.junit)
-    cov = jacoco(args.jacoco) if args.jacoco else istanbul(args.istanbul)
+    cov = jacoco(args.jacoco) if args.jacoco else cobertura(args.cobertura) if args.cobertura else istanbul(args.istanbul)
     text = f"{counts['passed']} passed, {counts['failed']} failed, {counts['skipped']} skipped."
     if cov is not None:
         text += f" Coverage: {cov:.1f}%"

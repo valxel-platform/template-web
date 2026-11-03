@@ -42,7 +42,7 @@ export default defineConfig({
       reporter: ["text", "json-summary", "lcov"],
       reportsDirectory: "coverage",
       // The platform's floor; products may raise it (see governance/product.yaml quality.unit).
-      thresholds: { lines: 70, functions: 70, branches: 70, statements: 70 },
+      thresholds: { lines: 90, functions: 90, branches: 90, statements: 90 },
     },
   },
 });

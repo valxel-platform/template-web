@@ -5,7 +5,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     // Local development: the API runs on 8080 (see the service template).
-    proxy: { "/api": "http://localhost:8080" },
+    // Feature flags: a local Flipt on 8081 (see README); without one, flags are off.
+    proxy: { "/api": "http://localhost:8080", "/ofrep": "http://localhost:8081" },
   },
   build: { sourcemap: true },
   test: {

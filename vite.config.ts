@@ -42,7 +42,7 @@ export default defineConfig({
       exclude: ["src/**/*.test.{ts,tsx}", "src/main.tsx", "src/test-setup.ts", "src/vite-env.d.ts"],
       reporter: ["text", "json-summary", "lcov"],
       reportsDirectory: "coverage",
-      // The platform's floor; products may raise it (see governance/product.yaml quality.unit).
+      // The platform's floor; products may raise it (see <product>-governance/product.yaml quality.unit).
       thresholds: { lines: 90, functions: 90, branches: 90, statements: 90 },
     },
   },

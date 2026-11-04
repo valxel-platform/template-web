@@ -6,6 +6,10 @@ updates:
     groups:
       dev-dependencies: { dependency-type: development, update-types: [minor, patch] }
     open-pull-requests-limit: 10
+    # typescript-eslint supports TypeScript below 6.1; take a new TypeScript major once it does.
+    ignore:
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }

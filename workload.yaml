@@ -1,0 +1,11 @@
+# OpenChoreo workload descriptor. The web app's pages are served to the internet by the product's
+# BFF (same origin, sign-in, API), never directly: this endpoint is visible to the project only.
+apiVersion: openchoreo.dev/v1alpha1
+metadata:
+  name: template-web
+endpoints:
+  - name: web
+    port: 8080
+    type: HTTP
+    visibility:
+      - project

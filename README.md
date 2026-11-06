@@ -16,6 +16,7 @@ you can also use **Use this template** on GitHub.
 | Serving        | Unprivileged nginx on 8080 with CSP, HSTS and security headers on every page (`security-headers.conf`), `/healthz`, immutable asset caching. Reached only through the BFF (`workload.yaml`: project visibility)                               | Secure defaults; works behind the platform's gateway                       |
 | Feature flags  | OpenFeature (React SDK) with the OFREP web provider; nginx forwards `/ofrep/` to the product's Flipt                                                                                                                                          | New UI ships dark; the SDLC tool turns it on at release                    |
 | Tracing        | OpenTelemetry in the browser: API calls carry `traceparent`; spans go to `/otlp/`, forwarded by nginx to the collector                                                                                                                        | One trace from the click to the database; uncaught errors recorded by type |
+| Errors         | Sentry, through this site's `/sentry/` path, when `SENTRY_DSN` is set; types and stacks only                                                                                                                                                  | Uncaught errors grouped into issues, alerting the SDLC tool                |
 | Supply chain   | `npm ci` from the lockfile, actions pinned by SHA, dependency review, Dependabot                                                                                                                                                              | Reproducible and reviewed dependencies                                     |
 
 ## Checks and how the pipeline reads them
@@ -87,6 +88,24 @@ are recorded as `browser.error` spans with the error's type only. Spans go to th
 | `OTEL_COLLECTOR_URL` | `http://otel-collector.observability:4318` | Unset: browser spans are dropped |
 
 URLs end up in traces: keep names, dates of birth and other personal data out of query strings.
+
+## Error reporting
+
+`src/errors.ts` sends uncaught errors and rejections to Sentry, with their stack, so they are
+grouped into issues and Sentry's issue alerts reach the SDLC tool as incident signals
+(`/api/signals/sentry`). Events go to this site's `/sentry/envelope/`, which `docker/32-sentry.sh`
+forwards to the DSN's Sentry project, so the CSP stays `connect-src 'self'`:
+
+| Variable             | Example                                |                               |
+| -------------------- | -------------------------------------- | ----------------------------- |
+| `SENTRY_DSN`         | `https://<key>@o1.ingest.sentry.io/42` | Unset: error reporting is off |
+| `SENTRY_ENVIRONMENT` | `production`                           |                               |
+| `SENTRY_RELEASE`     | the image tag                          |                               |
+
+Only the error's type, its stack frames and page paths leave the browser: no error messages, query
+strings, cookies, headers, user details, form values or console output (`scrub`, with Sentry's own
+collection turned off). For products with PHI, use a Sentry plan covered by a BAA, or leave the DSN
+unset. Upload source maps from the release pipeline if you want readable stacks.
 
 ## After creating a repo from this template
 

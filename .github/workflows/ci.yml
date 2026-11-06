@@ -118,3 +118,16 @@ jobs:
               echo "$headers" | grep -qi "^$h:" || { echo "$path is missing $h"; exit 1; }
             done
           done
+      # Error reporting is off without a DSN, on with one, and a malformed DSN stops the container.
+      - name: Check error reporting's configuration
+        run: |
+          test "$(curl -fs http://localhost:8080/sentry.json)" = '{"dsn":""}'
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8080/sentry/envelope/)" = 404
+          dsn=https://0123456789abcdef0123456789abcdef@sentry.io/42
+          docker run -d --name web-sentry -p 8081:8080 -e SENTRY_DSN=$dsn -e SENTRY_ENVIRONMENT=ci template-web:ci
+          for i in $(seq 1 20); do curl -fs http://localhost:8081/healthz >/dev/null && break; sleep 1; done
+          curl -fs http://localhost:8081/sentry.json | grep -q "\"dsn\":\"$dsn\",\"environment\":\"ci\""
+          curl -fsI http://localhost:8081/sentry.json | grep -qi '^content-security-policy:'
+          if docker run --rm -e SENTRY_DSN='https://evil.example/x' template-web:ci nginx -t 2>/dev/null; then
+            echo "a malformed DSN was accepted"; exit 1
+          fi

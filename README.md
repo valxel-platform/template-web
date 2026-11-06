@@ -102,6 +102,11 @@ forwards to the DSN's Sentry project, so the CSP stays `connect-src 'self'`:
 | `SENTRY_ENVIRONMENT` | `production`                           |                               |
 | `SENTRY_RELEASE`     | the image tag                          |                               |
 
+A failed API call carries the trace the API named in its `traceresponse` header: a report about it
+is tagged with that `trace_id`, the endpoint and the status, so the SDLC tool joins it to the backend's
+errors from the same request (one incident). Server failures the app shows to people (5xx, or no
+answer) are reported too, through `reportError`; a 4xx is the person's to fix and isn't.
+
 Only the error's type, its stack frames and page paths leave the browser: no error messages, query
 strings, cookies, headers, user details, form values or console output (`scrub`, with Sentry's own
 collection turned off). For products with PHI, use a Sentry plan covered by a BAA, or leave the DSN

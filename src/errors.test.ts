@@ -1,8 +1,9 @@
 import type { ErrorEvent } from "@sentry/react";
 import * as Sentry from "@sentry/react";
-import { scrub, startErrors } from "./errors";
+import { ApiError } from "./api/client";
+import { reportError, scrub, startErrors } from "./errors";
 
-vi.mock("@sentry/react", () => ({ init: vi.fn() }));
+vi.mock("@sentry/react", () => ({ init: vi.fn(), captureException: vi.fn() }));
 
 const json =
   (body: unknown, status = 200) =>
@@ -121,4 +122,15 @@ test("beforeSend scrubs, and bare events and odd URLs pass through", async () =>
   expect(scrub({ type: undefined, exception: { values: [{ type: "E" }] } }).exception).toEqual({
     values: [{ type: "E", value: undefined }],
   });
+});
+
+test("a failed API call's report carries the backend's trace, endpoint and status", () => {
+  const trace = "4bf92f3577b34da6a3ce929d0e0e4736";
+  const err = new ApiError(503, "unavailable", "GET /api/v1/greetings", trace);
+  const out = scrub({ type: undefined, tags: { a: "b" } }, { originalException: err });
+  expect(out.tags).toEqual({ a: "b", trace_id: trace, endpoint: "GET /api/v1/greetings", status: "503" });
+  const bare = scrub({ type: undefined }, { originalException: new ApiError(500, "x") });
+  expect(bare.tags).toEqual({ status: "500" });
+  reportError(err);
+  expect(Sentry.captureException).toHaveBeenCalledWith(err);
 });

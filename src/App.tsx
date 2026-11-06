@@ -1,6 +1,7 @@
 import { useEffect, useState, type SyntheticEvent } from "react";
 import { ApiError, type ApiClient } from "./api/client";
 import type { Session } from "./auth";
+import { reportError } from "./errors";
 
 export interface Auth {
   session: () => Promise<Session>;
@@ -34,6 +35,8 @@ export function App({ api, auth }: { api: ApiClient; auth: Auth }) {
         setError("Your session has ended. Sign in again.");
       } else {
         setError(err instanceof ApiError ? err.detail : "Something went wrong. Try again.");
+        // A failure the person saw that isn't theirs to fix: report it, tied to the API's trace.
+        if (!(err instanceof ApiError) || err.status >= 500) reportError(err);
       }
     } finally {
       setBusy(false);

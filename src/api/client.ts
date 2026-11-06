@@ -1,5 +1,8 @@
 /** A typed client for the provider's API. The contract test (client.pact.test.ts) pins what this
- * client relies on, so the provider cannot break it without its pipeline failing first. */
+ * client relies on, so the provider cannot break it without its pipeline failing first.
+ *
+ * Calls go to the BFF on the same origin with the session cookie; the BFF adds the person's token.
+ * Writes must send the CSRF token (see auth.ts) as X-XSRF-TOKEN. */
 
 export interface Greeting {
   message: string;
@@ -22,6 +25,7 @@ export function createApiClient(baseUrl: string, fetchImpl: typeof fetch = fetch
   return {
     async greeting(name) {
       const res = await fetchImpl(`${baseUrl}/api/v1/greetings?name=${encodeURIComponent(name)}`, {
+        credentials: "same-origin",
         headers: { Accept: "application/json" },
       });
       if (!res.ok) {

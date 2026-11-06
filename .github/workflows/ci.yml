@@ -106,3 +106,15 @@ jobs:
           persist-credentials: false
       # OpenChoreo builds and ships the image; this only proves the Dockerfile builds on every PR.
       - run: docker build --pull -t template-web:ci .
+      # Every page carries the security headers (nginx drops server-level headers in locations
+      # that set their own, which is easy to break).
+      - name: Check the security headers
+        run: |
+          docker run -d --name web -p 8080:8080 template-web:ci
+          for i in $(seq 1 20); do curl -fs http://localhost:8080/healthz >/dev/null && break; sleep 1; done
+          for path in / /some/page; do
+            headers=$(curl -fsI "http://localhost:8080$path")
+            for h in content-security-policy strict-transport-security x-content-type-options referrer-policy; do
+              echo "$headers" | grep -qi "^$h:" || { echo "$path is missing $h"; exit 1; }
+            done
+          done

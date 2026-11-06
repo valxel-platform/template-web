@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { OpenFeatureProvider } from "@openfeature/react-sdk";
 import { App } from "./App";
 import { createApiClient } from "./api/client";
+import { session, signIn, signOut } from "./auth";
 import { startFlags } from "./flags";
 import { startTelemetry } from "./telemetry";
 
@@ -14,7 +15,16 @@ void startFlags();
 createRoot(root).render(
   <StrictMode>
     <OpenFeatureProvider>
-      <App api={createApiClient("")} />
+      <App
+        api={createApiClient("")}
+        auth={{
+          session: () => session(),
+          signIn: () => {
+            signIn();
+          },
+          signOut: () => signOut(),
+        }}
+      />
     </OpenFeatureProvider>
   </StrictMode>,
 );

@@ -5,17 +5,18 @@ you can also use **Use this template** on GitHub.
 
 ## What you get
 
-| Area           | Choice                                                                                                                 | Why                                                                        |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| App            | React 19, TypeScript (strict), Vite 8                                                                                  | Current stack; strict types catch errors early                             |
-| Quality        | ESLint (type-checked rules), Prettier, `tsc --noEmit`                                                                  | One style; no unchecked `any`                                              |
-| Unit tests     | Vitest, Testing Library, V8 coverage of at least 90% (VX-11)                                                           | Tests what people see, not implementation details                          |
-| Contract tests | Pact consumer tests write `pacts/*.json` for the API to verify                                                         | The API can't break this app silently                                      |
-| End-to-end     | Playwright against the deployed app (`BASE_URL`); `@smoke` tests run in production                                     | Real browser, real environment                                             |
-| Serving        | Unprivileged nginx on 8080 with CSP and security headers, `/healthz`, immutable asset caching                          | Secure defaults; works behind the platform's gateway                       |
-| Feature flags  | OpenFeature (React SDK) with the OFREP web provider; nginx forwards `/ofrep/` to the product's Flipt                   | New UI ships dark; the SDLC tool turns it on at release                    |
-| Tracing        | OpenTelemetry in the browser: API calls carry `traceparent`; spans go to `/otlp/`, forwarded by nginx to the collector | One trace from the click to the database; uncaught errors recorded by type |
-| Supply chain   | `npm ci` from the lockfile, actions pinned by SHA, dependency review, Dependabot                                       | Reproducible and reviewed dependencies                                     |
+| Area           | Choice                                                                                                                                                                                                                                        | Why                                                                        |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| App            | React 19, TypeScript (strict), Vite 8                                                                                                                                                                                                         | Current stack; strict types catch errors early                             |
+| Quality        | ESLint (type-checked rules), Prettier, `tsc --noEmit`                                                                                                                                                                                         | One style; no unchecked `any`                                              |
+| Unit tests     | Vitest, Testing Library, V8 coverage of at least 90% (VX-11)                                                                                                                                                                                  | Tests what people see, not implementation details                          |
+| Contract tests | Pact consumer tests write `pacts/*.json` for the API to verify                                                                                                                                                                                | The API can't break this app silently                                      |
+| End-to-end     | Playwright against the deployed app (`BASE_URL`); `@smoke` tests run in production                                                                                                                                                            | Real browser, real environment                                             |
+| Sign-in        | Through the product's BFF (`template-bff`): `/auth/me`, `/auth/login`, `POST /auth/logout`. No token ever in the browser: the BFF holds them and sends the API the person's token; writes send the `XSRF-TOKEN` cookie back as `X-XSRF-TOKEN` | VX-17: tokens out of reach of scripts; one origin, no CORS                 |
+| Serving        | Unprivileged nginx on 8080 with CSP, HSTS and security headers on every page (`security-headers.conf`), `/healthz`, immutable asset caching. Reached only through the BFF (`workload.yaml`: project visibility)                               | Secure defaults; works behind the platform's gateway                       |
+| Feature flags  | OpenFeature (React SDK) with the OFREP web provider; nginx forwards `/ofrep/` to the product's Flipt                                                                                                                                          | New UI ships dark; the SDLC tool turns it on at release                    |
+| Tracing        | OpenTelemetry in the browser: API calls carry `traceparent`; spans go to `/otlp/`, forwarded by nginx to the collector                                                                                                                        | One trace from the click to the database; uncaught errors recorded by type |
+| Supply chain   | `npm ci` from the lockfile, actions pinned by SHA, dependency review, Dependabot                                                                                                                                                              | Reproducible and reviewed dependencies                                     |
 
 ## Checks and how the pipeline reads them
 
@@ -37,6 +38,15 @@ npm run test:contract  # writes pacts/template-web-template-service.json
 npm run lint && npm run typecheck && npm run format:check
 BASE_URL=https://staging.example.com npm run e2e
 ```
+
+## Signing in
+
+The app never sees a token. The product's BFF signs people in with the product's Keycloak realm,
+keeps their tokens, serves this app and proxies `/api/**` with the person's token, all on one
+origin. `src/auth.ts` asks the BFF who is signed in (`/auth/me`), starts sign-in (`/auth/login`) and
+signs out (`POST /auth/logout`, then a navigation to end the Keycloak session too). A 401 from the
+API means the session ended: the app offers to sign in again. Every write sends the CSRF token the
+BFF set (`csrfToken()` as `X-XSRF-TOKEN`).
 
 ## Feature flags
 
@@ -81,5 +91,5 @@ URLs end up in traces: keep names, dates of birth and other personal data out of
 ## After creating a repo from this template
 
 1. Rename the package, the Pact consumer and provider names, and the page title.
-2. Tighten `connect-src` in `nginx.conf` to the product's API origin.
+2. Keep `connect-src 'self'` in `security-headers.conf`: the API is on the same origin, behind the BFF.
 3. Share the pact with the provider (artifact today; a Pact Broker once you run one).

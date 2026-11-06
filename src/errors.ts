@@ -11,6 +11,7 @@
  * details, form values or console output. For PHI products use a Sentry plan covered by a BAA.
  */
 import * as Sentry from "@sentry/react";
+import { ApiError } from "./api/client";
 
 export interface ErrorConfig {
   dsn: string;
@@ -35,8 +36,18 @@ const httpData = (data: Record<string, unknown>) => ({
   status_code: typeof data.status_code === "number" ? data.status_code : undefined,
 });
 
-/** Strips an event down to what may leave the browser. Exported for tests. */
-export function scrub(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
+/** Strips an event down to what may leave the browser, and ties a failed API call to the
+ * backend's trace (tags trace_id, endpoint, status) so the SDLC tool sees one incident. */
+export function scrub(event: Sentry.ErrorEvent, hint?: Sentry.EventHint): Sentry.ErrorEvent {
+  const error = hint?.originalException;
+  if (error instanceof ApiError) {
+    event.tags = {
+      ...event.tags,
+      ...(error.traceId ? { trace_id: error.traceId } : {}),
+      ...(error.endpoint ? { endpoint: error.endpoint } : {}),
+      status: String(error.status),
+    };
+  }
   delete event.user;
   delete event.extra;
   delete event.contexts?.state;
@@ -62,6 +73,12 @@ export function scrub(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
       data: b.data?.url ? httpData(b.data) : undefined,
     }));
   return event;
+}
+
+/** Reports an error the app handled (shown to the person) but that someone should fix. Does
+ * nothing while error reporting is off. */
+export function reportError(error: unknown): void {
+  Sentry.captureException(error);
 }
 
 /** Starts Sentry from /sentry.json; resolves false when error reporting is off. */
@@ -93,7 +110,7 @@ export async function startErrors(
     // Traces go through OpenTelemetry (telemetry.ts); Sentry only takes errors.
     tracesSampleRate: 0,
     maxBreadcrumbs: 30,
-    beforeSend: (event) => scrub(event),
+    beforeSend: (event, hint) => scrub(event, hint),
   });
   return true;
 }

@@ -2,6 +2,9 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { App, type Auth } from "./App";
 import { ApiError, type ApiClient } from "./api/client";
+import { reportError } from "./errors";
+
+vi.mock("./errors", () => ({ reportError: vi.fn() }));
 
 function api(impl: ApiClient["greeting"]): ApiClient {
   return { greeting: impl };
@@ -32,6 +35,21 @@ describe("App", () => {
     await userEvent.type(await screen.findByLabelText("Your name"), "x");
     await userEvent.click(screen.getByRole("button", { name: "Greet me" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Name is too long");
+    expect(reportError).not.toHaveBeenCalled(); // the person's to fix, not a fault
+  });
+
+  it("reports a server failure the person saw, so it reaches the incident flow", async () => {
+    const failure = new ApiError(
+      503,
+      "Try again",
+      "GET /api/v1/greetings",
+      "4bf92f3577b34da6a3ce929d0e0e4736",
+    );
+    render(<App api={api(() => Promise.reject(failure))} auth={auth()} />);
+    await userEvent.type(await screen.findByLabelText("Your name"), "x");
+    await userEvent.click(screen.getByRole("button", { name: "Greet me" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Try again");
+    expect(reportError).toHaveBeenCalledWith(failure);
   });
 
   it("does not leak unexpected errors", async () => {

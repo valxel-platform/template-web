@@ -5,12 +5,14 @@ import { App } from "./App";
 import { createApiClient } from "./api/client";
 import { session, signIn, signOut } from "./auth";
 import { startFlags } from "./flags";
+import { startErrors } from "./errors";
 import { startTelemetry } from "./telemetry";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Missing #root element");
 
 startTelemetry();
+void startErrors();
 void startFlags();
 createRoot(root).render(
   <StrictMode>

@@ -4,6 +4,7 @@ import { OpenFeatureProvider } from "@openfeature/react-sdk";
 import { App } from "./App";
 import { createApiClient } from "./api/client";
 import { session, signIn, signOut } from "./auth";
+import { startCohorts } from "./cohorts";
 import { startFlags } from "./flags";
 import { startErrors } from "./errors";
 import { startTelemetry } from "./telemetry";
@@ -14,6 +15,7 @@ if (!root) throw new Error("Missing #root element");
 startTelemetry();
 void startErrors();
 void startFlags();
+startCohorts();
 createRoot(root).render(
   <StrictMode>
     <OpenFeatureProvider>

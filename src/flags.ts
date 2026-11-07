@@ -10,10 +10,12 @@
  *
  * The browser reads flags over OFREP from this site's own `/ofrep/` path, which nginx forwards
  * to the product's Flipt (docker/30-flags.sh), as this browser (`browserKey`), so gradual releases
- * work. With no flag server every flag is off.
+ * work. With no flag server every flag is off. Every flag the app reads is counted for the tool's
+ * on/off comparison (cohorts.ts).
  */
 import { OFREPWebProvider } from "@openfeature/ofrep-web-provider";
 import { OpenFeature, useBooleanFlagValue, type Provider } from "@openfeature/react-sdk";
+import { cohortHook } from "./cohorts";
 
 export function flagProvider(origin: string = window.location.origin): Provider {
   return new OFREPWebProvider({ baseUrl: origin, pollInterval: 60_000 });
@@ -52,6 +54,7 @@ export async function startFlags(
   provider: Provider = flagProvider(),
   key: string = browserKey(),
 ): Promise<void> {
+  OpenFeature.addHooks(cohortHook());
   try {
     await OpenFeature.setContext({ targetingKey: key });
   } catch {

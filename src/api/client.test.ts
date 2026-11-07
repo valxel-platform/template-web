@@ -48,4 +48,18 @@ describe("createApiClient", () => {
     );
     await expect(call.greeting("x")).rejects.toMatchObject({ status: 502, detail: "Bad Gateway" });
   });
+
+  it("counts a server failure or no answer against the flags in use", async () => {
+    const failed = vi.fn();
+    await expect(createApiClient("", respond(503, {}), failed).greeting("Ada")).rejects.toBeInstanceOf(
+      ApiError,
+    );
+    expect(failed).toHaveBeenCalledTimes(1);
+    await expect(
+      createApiClient("", () => Promise.reject(new TypeError("offline")), failed).greeting("Ada"),
+    ).rejects.toThrow("offline");
+    expect(failed).toHaveBeenCalledTimes(2);
+    await expect(createApiClient("", respond(400, {}), failed).greeting("")).rejects.toBeInstanceOf(ApiError);
+    expect(failed).toHaveBeenCalledTimes(2); // the person's mistake, not a failure
+  });
 });

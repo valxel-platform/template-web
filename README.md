@@ -76,6 +76,16 @@ The browser never holds a Flipt token: configure the product's Flipt to allow OF
 In development, run Flipt on `:8081` or leave it off (flags read as off). Tests set flags with
 `TypedInMemoryProvider` (see `src/flags.test.tsx`).
 
+**Gradual releases.** The SDLC tool turns a feature on for 5% of users, then 25%, and so on, and
+stops if the people who have it fail more than the people who don't. The services count their own
+requests. `src/cohorts.ts` counts what only the browser sees, in user-minutes: each minute the page
+is in front of the person counts once for every flag the app has read, on the side this browser
+got. The minute counts as failed if it had an uncaught error, an unhandled rejection, a reported
+error, or an API call that failed (a 5xx or no answer; a 4xx is the person's own mistake). Every
+minute the counts go to the BFF (`POST /flag-cohorts`, with the session and CSRF token), which
+adds up everyone's and logs them for the tool. Only flag keys, on or off, and counts leave the
+browser. Signed-out visitors aren't counted (the BFF refuses their posts).
+
 ## Tracing
 
 `src/telemetry.ts` starts OpenTelemetry in the browser. Every `fetch` to the app's API carries a
@@ -107,7 +117,11 @@ is tagged with that `trace_id`, the endpoint and the status, so the SDLC tool jo
 errors from the same request (one incident). Server failures the app shows to people (5xx, or no
 answer) are reported too, through `reportError`; a 4xx is the person's to fix and isn't.
 
-Only the error's type, its stack frames and page paths leave the browser: no error messages, query
+Each event also carries the feature flags this browser evaluated and their values (Sentry's
+OpenFeature integration). An error that happens only with a feature on is plain in the issue,
+and its flag is the first suspect.
+
+Only the error's type, its stack frames, page paths and flag values leave the browser: no error messages, query
 strings, cookies, headers, user details, form values or console output (`scrub`, with Sentry's own
 collection turned off). For products with PHI, use a Sentry plan covered by a BAA, or leave the DSN
 unset. Upload source maps from the release pipeline if you want readable stacks.

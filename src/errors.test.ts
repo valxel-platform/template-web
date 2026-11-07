@@ -3,7 +3,14 @@ import * as Sentry from "@sentry/react";
 import { ApiError } from "./api/client";
 import { reportError, scrub, startErrors } from "./errors";
 
-vi.mock("@sentry/react", () => ({ init: vi.fn(), captureException: vi.fn() }));
+vi.mock("@sentry/react", () => ({
+  init: vi.fn(),
+  captureException: vi.fn(),
+  openFeatureIntegration: () => ({ name: "OpenFeature" }),
+  OpenFeatureIntegrationHook: class {
+    after(): void {}
+  },
+}));
 
 const json =
   (body: unknown, status = 200) =>
@@ -37,6 +44,7 @@ test("with a DSN, errors go through this site's tunnel and nothing personal is s
       httpBodies: [],
       urlQueryParams: false,
     },
+    integrations: [{ name: "OpenFeature" }], // each event says which flags were on
   });
   expect(opts?.beforeSend).toBeTypeOf("function");
 });

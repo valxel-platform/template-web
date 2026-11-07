@@ -4,6 +4,8 @@
  * Calls go to the BFF on the same origin with the session cookie; the BFF adds the person's token.
  * Writes must send the CSRF token (see auth.ts) as X-XSRF-TOKEN. */
 
+import { cohorts, failedResponse } from "../cohorts";
+
 export interface Greeting {
   message: string;
 }
@@ -33,10 +35,27 @@ export function traceIdOf(res: Response): string {
   return TRACERESPONSE.exec(res.headers.get("traceresponse")?.trim() ?? "")?.[1] ?? "";
 }
 
-export function createApiClient(baseUrl: string, fetchImpl: typeof fetch = fetch): ApiClient {
+export function createApiClient(
+  baseUrl: string,
+  fetchImpl: typeof fetch = fetch,
+  failed: () => void = () => {
+    cohorts.fail();
+  },
+): ApiClient {
+  // A server failure or no answer counts against the flags in use this minute (cohorts.ts).
+  const call: typeof fetch = async (input, init) => {
+    try {
+      const res = await fetchImpl(input, init);
+      if (failedResponse(res.status)) failed();
+      return res;
+    } catch (e) {
+      failed();
+      throw e;
+    }
+  };
   return {
     async greeting(name) {
-      const res = await fetchImpl(`${baseUrl}/api/v1/greetings?name=${encodeURIComponent(name)}`, {
+      const res = await call(`${baseUrl}/api/v1/greetings?name=${encodeURIComponent(name)}`, {
         credentials: "same-origin",
         headers: { Accept: "application/json" },
       });

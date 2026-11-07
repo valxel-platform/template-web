@@ -9,9 +9,14 @@
  * What leaves the browser: the error's type, its stack (file, function, line) and the page's path.
  * Never error messages (they can echo what a person typed), query strings, cookies, headers, user
  * details, form values or console output. For PHI products use a Sentry plan covered by a BAA.
+ *
+ * Each event carries the feature flags this browser had and their values (Sentry's OpenFeature
+ * integration), so an error that only happens with a feature on is plain in the issue.
  */
+import { OpenFeature } from "@openfeature/web-sdk";
 import * as Sentry from "@sentry/react";
 import { ApiError } from "./api/client";
+import { cohorts } from "./cohorts";
 
 export interface ErrorConfig {
   dsn: string;
@@ -78,6 +83,7 @@ export function scrub(event: Sentry.ErrorEvent, hint?: Sentry.EventHint): Sentry
 /** Reports an error the app handled (shown to the person) but that someone should fix. Does
  * nothing while error reporting is off. */
 export function reportError(error: unknown): void {
+  cohorts.fail();
   Sentry.captureException(error);
 }
 
@@ -110,7 +116,10 @@ export async function startErrors(
     // Traces go through OpenTelemetry (telemetry.ts); Sentry only takes errors.
     tracesSampleRate: 0,
     maxBreadcrumbs: 30,
+    // The flags evaluated on this page and their values ride along on each event.
+    integrations: [Sentry.openFeatureIntegration()],
     beforeSend: (event, hint) => scrub(event, hint),
   });
+  OpenFeature.addHooks(new Sentry.OpenFeatureIntegrationHook());
   return true;
 }

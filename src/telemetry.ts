@@ -18,6 +18,7 @@ import { resourceFromAttributes } from "@opentelemetry/resources";
 import { BatchSpanProcessor, type SpanExporter, type SpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { WebTracerProvider } from "@opentelemetry/sdk-trace-web";
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
+import { COMPONENT } from "./component";
 
 export interface TelemetryOptions {
   service?: string;
@@ -27,7 +28,7 @@ export interface TelemetryOptions {
 }
 
 export function startTelemetry({
-  service = "template-web",
+  service = COMPONENT,
   origin = window.location.origin,
   processor,
 }: TelemetryOptions = {}): WebTracerProvider {
@@ -57,7 +58,7 @@ export function startTelemetry({
 }
 
 export function recordError(error: unknown): void {
-  const span: Span = trace.getTracer("template-web").startSpan("browser.error");
+  const span: Span = trace.getTracer(COMPONENT).startSpan("browser.error");
   // The type only: messages can echo what a person typed.
   span.setAttribute("error.type", error instanceof Error ? error.name : typeof error);
   span.setStatus({ code: SpanStatusCode.ERROR });

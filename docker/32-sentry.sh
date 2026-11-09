@@ -48,6 +48,7 @@ location = /sentry.json {
 }
 location = /sentry/envelope/ {
     limit_except POST { deny all; }
+    limit_req zone=errors burst=40 nodelay;
     client_max_body_size 1m;
     proxy_pass https://${host}/api/${project}/envelope/;
     proxy_ssl_server_name on;

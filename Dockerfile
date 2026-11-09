@@ -5,7 +5,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 COPY . .
-RUN npm run build
+RUN npm run build \
+ && find dist -type f \( -name '*.js' -o -name '*.css' -o -name '*.html' -o -name '*.svg' -o -name '*.json' \) \
+      -size +1k -exec gzip -9 -k {} \;
 
 FROM nginxinc/nginx-unprivileged:1.31-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf

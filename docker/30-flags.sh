@@ -35,6 +35,7 @@ fi
 cat >"$out" <<CONF
 location /ofrep/v1/evaluate/ {
     limit_except POST { deny all; }
+    limit_req zone=flags burst=400 nodelay;
     proxy_pass ${FLAGS_URL%/}/ofrep/v1/evaluate/;
     proxy_set_header x-flipt-environment "${FLAGS_ENVIRONMENT:-}";
     proxy_set_header x-flipt-namespace "${FLAGS_NAMESPACE:-}";

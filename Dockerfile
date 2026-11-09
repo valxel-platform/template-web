@@ -10,6 +10,10 @@ RUN npm run build \
       -size +1k -exec gzip -9 -k {} \;
 
 FROM nginxinc/nginx-unprivileged:1.31-alpine
+# The base image can lag Alpine's security fixes: take them at build time.
+USER root
+RUN apk upgrade --no-cache
+USER 101
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY security-headers.conf /etc/nginx/snippets/security-headers.conf
 COPY --chmod=755 docker/30-flags.sh /docker-entrypoint.d/30-flags.sh

@@ -17,6 +17,7 @@ import { OpenFeature } from "@openfeature/web-sdk";
 import * as Sentry from "@sentry/react";
 import { ApiError } from "./api/client";
 import { cohorts } from "./cohorts";
+import { COMPONENT } from "./component";
 
 export interface ErrorConfig {
   dsn: string;
@@ -118,6 +119,8 @@ export async function startErrors(
     maxBreadcrumbs: 30,
     // The flags evaluated on this page and their values ride along on each event.
     integrations: [Sentry.openFeatureIntegration()],
+    // Every report names its component, so the SDLC tool routes its issues to it.
+    initialScope: { tags: { component: COMPONENT } },
     beforeSend: (event, hint) => scrub(event, hint),
   });
   OpenFeature.addHooks(new Sentry.OpenFeatureIntegrationHook());

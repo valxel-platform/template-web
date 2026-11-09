@@ -117,6 +117,10 @@ is tagged with that `trace_id`, the endpoint and the status, so the SDLC tool jo
 errors from the same request (one incident). Server failures the app shows to people (5xx, or no
 answer) are reported too, through `reportError`; a 4xx is the person's to fix and isn't.
 
+Every event is tagged `component` with this app's name (`src/component.ts`), so the SDLC tool routes
+its issues to this component whatever the Sentry project is called. When the tool creates a repo
+from this template, it puts the component's name in the files `.vrixel/identity` lists.
+
 Each event also carries the feature flags this browser evaluated and their values (Sentry's
 OpenFeature integration). An error that happens only with a feature on is plain in the issue,
 and its flag is the first suspect.

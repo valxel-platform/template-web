@@ -45,6 +45,7 @@ test("with a DSN, errors go through this site's tunnel and nothing personal is s
       urlQueryParams: false,
     },
     integrations: [{ name: "OpenFeature" }], // each event says which flags were on
+    initialScope: { tags: { component: "template-web" } }, // the tool routes issues by it
   });
   expect(opts?.beforeSend).toBeTypeOf("function");
 });

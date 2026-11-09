@@ -31,10 +31,30 @@ BUDGETS = {
     "agent": {"turns_max": 8, "run_p95_s": 60},
 }
 # A change smaller than this is noise, whatever its percentage.
-FLOORS = {"p95_ms": 10, "p99_ms": 20, "lag_p95_s": 0.5, "lcp_ms": 200, "tbt_ms": 50, "cls": 0.02, "js_kb": 5,
-          "bundle_kb": 20, "cold_start_ms": 100, "turns_max": 1, "run_p95_s": 2}
-UNITS = {"p95_ms": " ms", "p99_ms": " ms", "lag_p95_s": " s", "lcp_ms": " ms", "tbt_ms": " ms", "js_kb": " KB",
-         "bundle_kb": " KB", "cold_start_ms": " ms", "run_p95_s": " s"}
+FLOORS = {
+    "p95_ms": 10,
+    "p99_ms": 20,
+    "lag_p95_s": 0.5,
+    "lcp_ms": 200,
+    "tbt_ms": 50,
+    "cls": 0.02,
+    "js_kb": 5,
+    "bundle_kb": 20,
+    "cold_start_ms": 100,
+    "turns_max": 1,
+    "run_p95_s": 2,
+}
+UNITS = {
+    "p95_ms": " ms",
+    "p99_ms": " ms",
+    "lag_p95_s": " s",
+    "lcp_ms": " ms",
+    "tbt_ms": " ms",
+    "js_kb": " KB",
+    "bundle_kb": " KB",
+    "cold_start_ms": " ms",
+    "run_p95_s": " s",
+}
 
 
 def metrics(data: dict | None) -> dict | None:
@@ -50,8 +70,12 @@ def metrics(data: dict | None) -> dict | None:
         return (m.get(f"{name}{{scenario:load}}") or m.get(name) or {}).get("values", {})
 
     dur, failed, reqs = pick("http_req_duration"), pick("http_req_failed"), pick("http_reqs")
-    out = {"p95_ms": dur.get("p(95)"), "p99_ms": dur.get("p(99)"), "error_rate": failed.get("rate", 0.0),
-           "rps": reqs.get("rate")}
+    out = {
+        "p95_ms": dur.get("p(95)"),
+        "p99_ms": dur.get("p(99)"),
+        "error_rate": failed.get("rate", 0.0),
+        "rps": reqs.get("rate"),
+    }
     return {k: float(v) for k, v in out.items() if v is not None}
 
 
@@ -77,7 +101,10 @@ def judge(run: dict, budget: dict, ref: dict | None, pct: float, against: str) -
                 problems.append(f"error rate {b:.2%} is up from {a:.2%} on {against}")
             continue
         if a > 0 and b > a * (1 + pct / 100) and b - a > FLOORS.get(metric, 0):
-            problems.append(f"{metric} {fmt(metric, b)} is {100 * (b - a) / a:.0f}% worse than {against} ({fmt(metric, a)})")
+            worse = 100 * (b - a) / a
+            problems.append(
+                f"{metric} {fmt(metric, b)} is {worse:.0f}% worse than {against} ({fmt(metric, a)})"
+            )
     return problems
 
 
@@ -89,7 +116,9 @@ def fmt(metric: str, v: float) -> str:
 
 def describe(run: dict, ref: dict | None, budget: dict, against: str) -> str:
     """A one-line description (commit statuses take 140 characters)."""
-    main = next((m for m in ("p95_ms", "lag_p95_s", "lcp_ms", "js_kb", "bundle_kb", "turns_max") if m in run), None)
+    main = next(
+        (m for m in ("p95_ms", "lag_p95_s", "lcp_ms", "js_kb", "bundle_kb", "turns_max") if m in run), None
+    )
     if not main:
         return "no metrics"
     parts = [f"{main.split('_')[0]} {fmt(main, run[main])}"]
@@ -105,12 +134,13 @@ def describe(run: dict, ref: dict | None, budget: dict, against: str) -> str:
 
 def github(method: str, path: str, body: dict | None = None) -> dict | None:
     token, api = os.environ.get("GITHUB_TOKEN"), os.environ.get("GITHUB_API_URL", "https://api.github.com")
-    if not token:
+    if not token or not api.startswith("https://"):
         return None
-    req = urllib.request.Request(api + path, method=method, data=json.dumps(body).encode() if body else None,
-                                 headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"})
+    req = urllib.request.Request(  # noqa: S310 (https only, checked above)api + path, method=method, data=json.dumps(body).encode() if body else None,
+        headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+    )
     try:
-        with urllib.request.urlopen(req, timeout=20) as r:
+        with urllib.request.urlopen(req, timeout=20) as r:  # noqa: S310 (https only)
             return json.loads(r.read() or b"{}")
     except urllib.error.HTTPError as e:
         if e.code == 404:
@@ -134,8 +164,11 @@ def save_baseline(repo: str, name: str, run: dict, sha: str) -> None:
         head = github("GET", f"/repos/{repo}/git/ref/heads/{default}")["object"]["sha"]
         github("POST", f"/repos/{repo}/git/refs", {"ref": f"refs/heads/{BRANCH}", "sha": head})
     current = github("GET", f"/repos/{repo}/contents/{name}?ref={BRANCH}")
-    body = {"message": f"Performance baseline from {sha[:7]}", "branch": BRANCH,
-            "content": base64.b64encode(json.dumps({**run, "sha": sha}, indent=2).encode()).decode()}
+    body = {
+        "message": f"Performance baseline from {sha[:7]}",
+        "branch": BRANCH,
+        "content": base64.b64encode(json.dumps({**run, "sha": sha}, indent=2).encode()).decode(),
+    }
     if current and current.get("sha"):
         body["sha"] = current["sha"]
     github("PUT", f"/repos/{repo}/contents/{name}", body)
@@ -148,7 +181,9 @@ def main() -> int:
     ap.add_argument("--reference", help="the image built from main, run the same way")
     ap.add_argument("--baseline", help="name of the last passing run on the perf-baselines branch")
     ap.add_argument("--save-baseline", help="keep this run on the perf-baselines branch when it passes")
-    ap.add_argument("--budget", default="", help="JSON budget for this kind (the product's); defaults otherwise")
+    ap.add_argument(
+        "--budget", default="", help="JSON budget for this kind (the product's); defaults otherwise"
+    )
     ap.add_argument("--regression", type=float, default=20.0, help="how much worse than the reference, in %%")
     ap.add_argument("--context", default="", help="commit status to post, e.g. 'perf-smoke / report'")
     ap.add_argument("--sha", default=os.environ.get("REPORT_SHA") or os.environ.get("GITHUB_SHA", ""))
@@ -167,13 +202,18 @@ def main() -> int:
             ref, against = metrics(read(a.reference)), "main"
         problems = judge(run, budget, ref, a.regression, against)
     budget = {**BUDGETS[a.kind], **(json.loads(a.budget) if a.budget else {})}
-    lines = [f"### {a.context or 'Performance'}: {'passed' if not problems else 'failed'}", "",
-             "| Metric | This run | " + ("Reference | " if ref else "") + "Budget |",
-             "| --- | --- | " + ("--- | " if ref else "") + "--- |"]
+    lines = [
+        f"### {a.context or 'Performance'}: {'passed' if not problems else 'failed'}",
+        "",
+        "| Metric | This run | " + ("Reference | " if ref else "") + "Budget |",
+        "| --- | --- | " + ("--- | " if ref else "") + "--- |",
+    ]
     for metric in sorted(set(run) | set(budget)):
-        lines.append(f"| {metric} | {fmt(metric, run[metric]) if metric in run else ''} | "
-                     + (f"{fmt(metric, ref[metric]) if metric in (ref or {}) else ''} | " if ref else "")
-                     + f"{fmt(metric, budget[metric]) if metric in budget else ''} |")
+        lines.append(
+            f"| {metric} | {fmt(metric, run[metric]) if metric in run else ''} | "
+            + (f"{fmt(metric, ref[metric]) if metric in (ref or {}) else ''} | " if ref else "")
+            + f"{fmt(metric, budget[metric]) if metric in budget else ''} |"
+        )
     lines += [""] + [f"- {p}" for p in problems]
     if not ref:
         lines.append(f"\nNo reference run yet ({against}): judged against the budget only.")
@@ -184,10 +224,17 @@ def main() -> int:
             f.write(report + "\n")
     if a.context and a.sha and a.repo:
         desc = "; ".join(problems)[:140] if problems else describe(run, ref, budget, against)
-        github("POST", f"/repos/{a.repo}/statuses/{a.sha}",
-               {"state": "failure" if problems else "success", "context": a.context, "description": desc,
+        github(
+            "POST",
+            f"/repos/{a.repo}/statuses/{a.sha}",
+            {
+                "state": "failure" if problems else "success",
+                "context": a.context,
+                "description": desc,
                 "target_url": f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/{a.repo}"
-                              f"/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"})
+                f"/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}",
+            },
+        )
     if not problems and a.save_baseline and a.repo:
         save_baseline(a.repo, a.save_baseline, run, a.sha)
     return 1 if problems else 0

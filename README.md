@@ -50,7 +50,7 @@ opens the report as pending; the workflows answer.
 
 ```bash
 npm ci
-npm run dev            # http://localhost:5173, /api proxied to the service on :8080
+npm run dev            # http://localhost:5173, /api proxied to the service on :8080, /api/agent to the agent on :8083
 npm test               # unit tests with coverage
 npm run test:contract  # writes pacts/template-web-template-service.json
 npm run lint && npm run typecheck && npm run format:check
@@ -65,6 +65,19 @@ origin. `src/auth.ts` asks the BFF who is signed in (`/auth/me`), starts sign-in
 signs out (`POST /auth/logout`, then a navigation to end the Keycloak session too). A 401 from the
 API means the session ended: the app offers to sign in again. Every write sends the CSRF token the
 BFF set (`csrfToken()` as `X-XSRF-TOKEN`).
+
+## Talking with the agent
+
+`src/chat/` is a conversation with the product's agent (`template-agent`), through the BFF at
+`/api/agent`, so the agent acts as the signed-in person. Sending a message answers at once; the
+reply then streams in (Server-Sent Events): its text as it is written and each step it takes
+("Find a patient"). A change the agent proposes waits in the conversation, with its details, for
+the person to approve or decline; a conversation that ran out of steps asks whether to keep going.
+One message is answered at a time. The stream can come from any replica of the agent, and
+EventSource resumes from the last event after a dropped connection.
+
+Replace the panel's wording and placement with your product's; keep the client (`client.ts`). The
+`Chat` component takes the client as a prop, so a product without an agent just leaves it out.
 
 ## Feature flags
 

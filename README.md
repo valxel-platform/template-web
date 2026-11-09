@@ -29,6 +29,23 @@ you can also use **Use this template** on GitHub.
 | `dependency-review`, `image`                             | `ci.yml`                                     | no        | dependency diff; Dockerfile builds                         |
 | `integration / report`, `e2e / report`, `smoke / report` | `post-deploy.yml`                            | per stage | the stage's suite                                          |
 
+## Performance tests
+
+The Vrixel SDLC decides per change whether this app needs a performance test: a change to its
+pages, routes, dependencies or settings gets the **smoke** test; a design that adds traffic gets the
+**staging** test as well. It labels the pull request (`vrixel:perf-smoke`, `vrixel:perf-full`) and
+opens the report as pending; the workflows answer.
+
+- **Smoke** (`perf.yml`): main's build and the PR's, measured the same way on one runner: Lighthouse
+  three times each (median Largest Contentful Paint, Total Blocking Time, Cumulative Layout Shift)
+  and the compressed JavaScript the first page loads. Fails when the PR is more than 20% worse than
+  main or misses the budget.
+- **Staging** (`post-deploy.yml`): Lighthouse against the deployed app through the BFF, judged against
+  the budget and the last passing run, kept on the `perf-baselines` branch.
+- **Budgets**: LCP 2.5 s, TBT 200 ms, CLS 0.1 (Core Web Vitals "good"; TBT stands in for INP in a
+  lab), 200 KB of compressed JavaScript on first load, unless the product's `performance:` settings
+  say otherwise. `perf/compare.py` judges; `perf/summarize.mjs` reads Lighthouse's results.
+
 ## Develop
 
 ```bash

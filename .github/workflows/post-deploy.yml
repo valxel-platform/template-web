@@ -1,6 +1,7 @@
 # Runs after the Vrixel SDLC deploys a commit: integration in dev, end-to-end in staging, smoke in
 # production. Results are posted on the deployed commit as "integration / report", "e2e / report"
-# and "smoke / report", which the pipeline's quality gates read.
+# and "smoke / report", which the pipeline's quality gates read. In staging, when the change needs
+# it (performance: full), Lighthouse too: "performance / report".
 name: post-deploy
 
 on:
@@ -68,3 +69,41 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 14
+
+  # Staging page performance, when the Vrixel SDLC says the change needs it: Lighthouse three times
+  # against the deployed app (through the BFF), median LCP, TBT and CLS and the JavaScript actually
+  # transferred, judged against the budget and the last passing run (the perf-baselines branch).
+  performance:
+    name: performance
+    if: (github.event.client_payload.stage || inputs.stage) == 'staging' && github.event.client_payload.performance == 'full'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write # the perf-baselines branch
+      statuses: write
+    env:
+      BASE_URL: ${{ github.event.client_payload.base_url }}
+      REPORT_SHA: ${{ github.event.client_payload.sha }}
+      SETTINGS: ${{ toJSON(github.event.client_payload.perf_settings) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.REPORT_SHA }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Measure the deployed app
+        run: |
+          mkdir -p out/lhci
+          (cd out/lhci && npx --yes @lhci/cli@0.16.0 collect --url="$BASE_URL" --numberOfRuns=3 --settings.preset=desktop)
+          node perf/summarize.mjs out/lhci/.lighthouseci out/staging.json
+      - name: Judge and report
+        if: ${{ !cancelled() }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          budget=$(python3 -c 'import json,os; s=json.loads(os.environ["SETTINGS"] or "{}") or {}; print(json.dumps((s.get("budgets") or {}).get("web") or {}))')
+          pct=$(python3 -c 'import json,os; s=json.loads(os.environ["SETTINGS"] or "{}") or {}; print(s.get("regression_pct") or 10)')
+          python3 perf/compare.py --kind web --run out/staging.json --budget "$budget" --regression "$pct" \
+            --baseline staging.json --save-baseline staging.json --context "performance / report"

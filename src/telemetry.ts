@@ -6,8 +6,8 @@
  * this site's own `/otlp/` path, which nginx forwards to the data plane's OpenTelemetry collector
  * (docker/30-otel.sh); with no collector configured they go nowhere.
  *
- * Spans carry URLs, methods, status codes and timings. Keep personal data out of URLs (use ids or
- * request bodies, not names or dates of birth in query strings): URLs end up in traces.
+ * Spans carry URL paths, methods, status codes and timings; query strings are removed before a span
+ * leaves the browser. Keep personal data out of paths (use ids, not names or dates of birth).
  * Uncaught errors are recorded as `browser.error` spans with the error's type only.
  */
 import { SpanStatusCode, trace, type Span } from "@opentelemetry/api";
@@ -45,6 +45,10 @@ export function startTelemetry({
         // Same-origin API calls get traceparent; the exporter's own calls aren't traced.
         ignoreUrls: [/\/otlp\//, /\/ofrep\//],
         propagateTraceHeaderCorsUrls: [],
+        // Query strings never reach a trace: they can hold what a person searched for.
+        applyCustomAttributesOnSpan: (span) => {
+          withoutQueryStrings(span);
+        },
       }),
     ],
   });
@@ -63,4 +67,21 @@ export function recordError(error: unknown): void {
   span.setAttribute("error.type", error instanceof Error ? error.name : typeof error);
   span.setStatus({ code: SpanStatusCode.ERROR });
   span.end();
+}
+
+/** URL attributes the fetch instrumentation sets (older and current semantic conventions). */
+const URL_ATTRIBUTES = ["http.url", "url.full"];
+
+/** The URL without its query string and fragment. */
+export function stripQuery(url: string): string {
+  const cut = url.search(/[?#]/);
+  return cut < 0 ? url : url.slice(0, cut);
+}
+
+export function withoutQueryStrings(span: Span): void {
+  const attributes = (span as unknown as { attributes?: Record<string, unknown> }).attributes ?? {};
+  for (const name of URL_ATTRIBUTES) {
+    const value = attributes[name];
+    if (typeof value === "string") span.setAttribute(name, stripQuery(value));
+  }
 }

@@ -24,6 +24,7 @@ fi
 cat >"$out" <<CONF
 location = /otlp/v1/traces {
     limit_except POST { deny all; }
+    limit_req zone=telemetry burst=100 nodelay;
     client_max_body_size 1m;
     proxy_pass ${OTEL_COLLECTOR_URL%/}/v1/traces;
     proxy_set_header Authorization "";

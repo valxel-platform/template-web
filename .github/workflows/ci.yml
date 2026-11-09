@@ -104,8 +104,23 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # OpenChoreo builds and ships the image; this only proves the Dockerfile builds on every PR.
+      # OpenChoreo builds and ships the image; this proves it builds, serves safely, and has no known
+      # high or critical vulnerabilities with a fix available.
       - run: docker build --pull -t template-web:ci .
+      # Syft and Grype run as containers (pinned versions), not as marketplace actions.
+      - name: Software bill of materials
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock anchore/syft:v1.57.1 \
+            docker:template-web:ci -o cyclonedx-json > sbom.cyclonedx.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom
+          path: sbom.cyclonedx.json
+          retention-days: 30
+      - name: Scan for vulnerabilities with a fix
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock anchore/grype:v0.121.3 \
+            docker:template-web:ci --only-fixed --fail-on high
       # Every page carries the security headers (nginx drops server-level headers in locations
       # that set their own, which is easy to break).
       - name: Check the security headers
@@ -118,6 +133,20 @@ jobs:
               echo "$headers" | grep -qi "^$h:" || { echo "$path is missing $h"; exit 1; }
             done
           done
+      # Bundles are served compressed, access logs are JSON without paths or query strings, and the
+      # public telemetry endpoint answers 429 past its ceiling instead of passing a flood on.
+      - name: Check compression, logs and limits
+        run: |
+          js=$(curl -fs http://localhost:8080/ | grep -o '/assets/[^"]*\.js' | head -1)
+          curl -fsI -H 'Accept-Encoding: gzip' "http://localhost:8080$js" | grep -qi '^content-encoding: gzip'
+          curl -fs "http://localhost:8080/patients/MRN-55821?name=Ana" >/dev/null
+          docker logs web 2>/dev/null | grep '"route":"app"' | tail -1 | grep -q '"http.response.status_code":200'
+          if docker logs web 2>&1 | grep -q 'MRN-55821\|name=Ana'; then echo "a path or query reached the log"; exit 1; fi
+          docker run -d --name web-otel -p 8082:8080 -e OTEL_COLLECTOR_URL=http://127.0.0.1:9 template-web:ci
+          for i in $(seq 1 20); do curl -fs http://localhost:8082/healthz >/dev/null && break; sleep 1; done
+          codes=$(for i in $(seq 1 400); do curl -s -o /dev/null -w '%{http_code}\n' -X POST http://localhost:8082/otlp/v1/traces; done | sort | uniq -c)
+          echo "$codes"
+          echo "$codes" | grep -q ' 429$' || { echo "no limit on /otlp/"; exit 1; }
       # Error reporting is off without a DSN, on with one, and a malformed DSN stops the container.
       - name: Check error reporting's configuration
         run: |

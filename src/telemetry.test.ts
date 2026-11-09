@@ -1,6 +1,6 @@
 import { trace } from "@opentelemetry/api";
 import { InMemorySpanExporter, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base";
-import { recordError, startTelemetry } from "./telemetry";
+import { recordError, startTelemetry, stripQuery } from "./telemetry";
 
 const spans = new InMemorySpanExporter();
 const seen: Headers[] = [];
@@ -41,6 +41,26 @@ test("API calls carry a traceparent and are recorded as spans", async () => {
   const [span] = spans.getFinishedSpans();
   expect(span?.resource.attributes["service.name"]).toBe("emr-web");
   expect(span?.attributes["http.request.method"] ?? span?.attributes["http.method"]).toBe("GET");
+});
+
+test("query strings never reach a trace", async () => {
+  await fetch(`${window.location.origin}/api/v1/patients?name=Ana%20Lopez&dob=1984-03-02`);
+  await vi.waitFor(
+    () => {
+      expect(spans.getFinishedSpans().length).toBeGreaterThan(0);
+    },
+    { timeout: 2000 },
+  );
+  const [span] = spans.getFinishedSpans();
+  const url = String(span?.attributes["url.full"] ?? span?.attributes["http.url"]);
+  expect(url).toBe(`${window.location.origin}/api/v1/patients`);
+  expect(JSON.stringify(span?.attributes)).not.toContain("Lopez");
+});
+
+test("stripQuery keeps the path", () => {
+  expect(stripQuery("https://x/a/b?q=1#f")).toBe("https://x/a/b");
+  expect(stripQuery("https://x/a#f?q")).toBe("https://x/a");
+  expect(stripQuery("/a")).toBe("/a");
 });
 
 test("errors are recorded by type, without their message", () => {

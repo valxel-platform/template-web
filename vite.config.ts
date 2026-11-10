@@ -6,7 +6,12 @@ export default defineConfig({
   server: {
     // Local development: the API runs on 8080 (see the service template).
     // Feature flags: a local Flipt on 8081 (see README); without one, flags are off.
-    proxy: { "/api": "http://localhost:8080", "/ofrep": "http://localhost:8081" },
+    // The agent (template-agent) on 8083, as the BFF routes it: /api/agent stripped.
+    proxy: {
+      "/api/agent": { target: "http://localhost:8083", rewrite: (p) => p.replace(/^\/api\/agent/, "") },
+      "/api": "http://localhost:8080",
+      "/ofrep": "http://localhost:8081",
+    },
   },
   build: { sourcemap: true },
   test: {

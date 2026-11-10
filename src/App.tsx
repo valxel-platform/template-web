@@ -2,6 +2,8 @@ import { useEffect, useState, type SyntheticEvent } from "react";
 import { ApiError, type ApiClient } from "./api/client";
 import type { Session } from "./auth";
 import { reportError } from "./errors";
+import { Chat } from "./chat/Chat";
+import type { ChatClient } from "./chat/client";
 
 export interface Auth {
   session: () => Promise<Session>;
@@ -9,7 +11,7 @@ export interface Auth {
   signOut: () => Promise<void>;
 }
 
-export function App({ api, auth }: { api: ApiClient; auth: Auth }) {
+export function App({ api, auth, chat }: { api: ApiClient; auth: Auth; chat?: ChatClient }) {
   const [who, setWho] = useState<Session | null>(null);
   const [name, setName] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -82,6 +84,14 @@ export function App({ api, auth }: { api: ApiClient; auth: Auth }) {
       </form>
       {message && <p role="status">{message}</p>}
       {error && <p role="alert">{error}</p>}
+      {chat && (
+        <Chat
+          chat={chat}
+          signedOut={() => {
+            setWho({ authenticated: false });
+          }}
+        />
+      )}
     </main>
   );
 }

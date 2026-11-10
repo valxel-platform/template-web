@@ -4,6 +4,7 @@ import { OpenFeatureProvider } from "@openfeature/react-sdk";
 import { App } from "./App";
 import { createApiClient } from "./api/client";
 import { session, signIn, signOut } from "./auth";
+import { createChatClient } from "./chat/client";
 import { startCohorts } from "./cohorts";
 import { startFlags } from "./flags";
 import { startErrors } from "./errors";
@@ -21,6 +22,7 @@ createRoot(root).render(
     <OpenFeatureProvider>
       <App
         api={createApiClient("")}
+        chat={createChatClient()}
         auth={{
           session: () => session(),
           signIn: () => {

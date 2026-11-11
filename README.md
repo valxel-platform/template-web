@@ -116,6 +116,25 @@ minute the counts go to the BFF (`POST /flag-cohorts`, with the session and CSRF
 adds up everyone's and logs them for the tool. Only flag keys, on or off, and counts leave the
 browser. Signed-out visitors aren't counted (the BFF refuses their posts).
 
+## Product events
+
+Each feature's PRD names the product goal it moves and the events that show it; the HLD says which
+repo records each. When it's this app, track them where they happen:
+
+```ts
+import { track } from "./events";
+
+track("checkin_completed");
+```
+
+The count rides in the minute's post to the BFF: on each side of every flag in use (so a gradual
+release can compare how often people with a feature on do it against people with it off) and in
+total, which the BFF logs as `vrixel.events {"checkin_completed":12}`. The SDLC tool counts that
+line in staging before G6: an event that never fires there can't measure the goal after release.
+Only names and counts leave the browser, never attributes or anything about the person. A name
+that isn't lowercase words joined by `_` or `.` throws in development and tests, and is dropped in
+production. At most 20 names and 120 of each per minute, the BFF's limits.
+
 ## Tracing
 
 `src/telemetry.ts` starts OpenTelemetry in the browser. Every `fetch` to the app's API carries a

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Build: node, then serve the static bundle with unprivileged nginx (runs as uid 101, port 8080).
-FROM node:26-alpine AS build
+FROM node:26-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5 AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
@@ -9,7 +9,7 @@ RUN npm run build \
  && find dist -type f \( -name '*.js' -o -name '*.css' -o -name '*.html' -o -name '*.svg' -o -name '*.json' \) \
       -size +1k -exec gzip -9 -k {} \;
 
-FROM nginxinc/nginx-unprivileged:1.31-alpine
+FROM nginxinc/nginx-unprivileged:1.31-alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e
 # The base image can lag Alpine's security fixes: take them at build time.
 USER root
 RUN apk upgrade --no-cache

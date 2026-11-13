@@ -1,7 +1,7 @@
 /**
  * Feature flags through OpenFeature.
  *
- * The Vrixel SDLC tool gives each feature a flag (a key like `emr.emr-feat-3.check-in-kiosk`) in
+ * The Valxel SDLC tool gives each feature a flag (a key like `emr.emr-feat-3.check-in-kiosk`) in
  * the product's Flipt when its design is approved: on in dev and staging, off in production until
  * the feature is released. Put the feature's new UI behind it:
  *
@@ -21,7 +21,7 @@ export function flagProvider(origin: string = window.location.origin): Provider 
   return new OFREPWebProvider({ baseUrl: origin, pollInterval: 60_000 });
 }
 
-const BROWSER_KEY = "vrixel.flags.browser";
+const BROWSER_KEY = "valxel.flags.browser";
 
 type KeyStore = Pick<Storage, "getItem" | "setItem">;
 

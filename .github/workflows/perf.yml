@@ -1,5 +1,5 @@
-# Performance smoke test, on pull requests the Vrixel SDLC labels vrixel:perf-smoke or
-# vrixel:perf-full. Main's build and the PR's are measured the same way on this runner: Lighthouse
+# Performance smoke test, on pull requests the Valxel SDLC labels valxel:perf-smoke or
+# valxel:perf-full. Main's build and the PR's are measured the same way on this runner: Lighthouse
 # (three runs each, median) for Largest Contentful Paint, Total Blocking Time and layout shift,
 # and the compressed JavaScript the first page needs. perf/compare.py posts "perf-smoke / report":
 # failed when the PR is more than 20% worse than main or misses the budget (LCP 2.5 s, TBT 200 ms,
@@ -20,7 +20,7 @@ concurrency:
 jobs:
   perf-smoke:
     name: perf-smoke
-    if: contains(github.event.pull_request.labels.*.name, 'vrixel:perf-smoke') || contains(github.event.pull_request.labels.*.name, 'vrixel:perf-full')
+    if: contains(github.event.pull_request.labels.*.name, 'valxel:perf-smoke') || contains(github.event.pull_request.labels.*.name, 'valxel:perf-full')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:

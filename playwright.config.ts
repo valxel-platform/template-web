@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 // End-to-end and smoke tests run against a deployed environment (BASE_URL), triggered by the
-// Vrixel SDLC after a deployment is ready (see .github/workflows/post-deploy.yml).
+// Valxel SDLC after a deployment is ready (see .github/workflows/post-deploy.yml).
 export default defineConfig({
   testDir: "e2e",
   fullyParallel: true,

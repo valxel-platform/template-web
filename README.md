@@ -1,6 +1,6 @@
 # Web template (React 19, TypeScript, Vite)
 
-The golden path for Vrixel web apps. The Vrixel SDLC creates consumer repos from this template;
+The golden path for Valxel web apps. The Valxel SDLC creates consumer repos from this template;
 you can also use **Use this template** on GitHub.
 
 ## What you get
@@ -21,7 +21,7 @@ you can also use **Use this template** on GitHub.
 
 ## Checks and how the pipeline reads them
 
-| Check                                                    | Where                                        | Required  | Read by the Vrixel SDLC as                                 |
+| Check                                                    | Where                                        | Required  | Read by the Valxel SDLC as                                 |
 | -------------------------------------------------------- | -------------------------------------------- | --------- | ---------------------------------------------------------- |
 | `unit`                                                   | `ci.yml` (lint, format, types, tests, build) | yes       | the `unit` suite, counts and coverage from `unit / report` |
 | `contract`                                               | `ci.yml`                                     | yes       | the `contract` suite                                       |
@@ -31,9 +31,9 @@ you can also use **Use this template** on GitHub.
 
 ## Performance tests
 
-The Vrixel SDLC decides per change whether this app needs a performance test: a change to its
+The Valxel SDLC decides per change whether this app needs a performance test: a change to its
 pages, routes, dependencies or settings gets the **smoke** test; a design that adds traffic gets the
-**staging** test as well. It labels the pull request (`vrixel:perf-smoke`, `vrixel:perf-full`) and
+**staging** test as well. It labels the pull request (`valxel:perf-smoke`, `valxel:perf-full`) and
 opens the report as pending; the workflows answer.
 
 - **Smoke** (`perf.yml`): main's build and the PR's, measured the same way on one runner: Lighthouse
@@ -81,7 +81,7 @@ Replace the panel's wording and placement with your product's; keep the client (
 
 ## Feature flags
 
-The Vrixel SDLC creates a flag for each feature in the product's Flipt when its design is
+The Valxel SDLC creates a flag for each feature in the product's Flipt when its design is
 approved (on in dev and staging, off in production until release). Put the feature's new UI
 behind it:
 
@@ -129,7 +129,7 @@ track("checkin_completed");
 
 The count rides in the minute's post to the BFF: on each side of every flag in use (so a gradual
 release can compare how often people with a feature on do it against people with it off) and in
-total, which the BFF logs as `vrixel.events {"checkin_completed":12}`. The SDLC tool counts that
+total, which the BFF logs as `valxel.events {"checkin_completed":12}`. The SDLC tool counts that
 line in staging before G6: an event that never fires there can't measure the goal after release.
 Only names and counts leave the browser, never attributes or anything about the person. A name
 that isn't lowercase words joined by `_` or `.` throws in development and tests, and is dropped in
@@ -169,7 +169,7 @@ answer) are reported too, through `reportError`; a 4xx is the person's to fix an
 
 Every event is tagged `component` with this app's name (`src/component.ts`), so the SDLC tool routes
 its issues to this component whatever the Sentry project is called. When the tool creates a repo
-from this template, it puts the component's name in the files `.vrixel/identity` lists.
+from this template, it puts the component's name in the files `.valxel/identity` lists.
 
 Each event also carries the feature flags this browser evaluated and their values (Sentry's
 OpenFeature integration). An error that happens only with a feature on is plain in the issue,

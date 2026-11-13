@@ -1,4 +1,4 @@
-# Runs after the Vrixel SDLC deploys a commit: integration in dev, end-to-end in staging, smoke in
+# Runs after the Valxel SDLC deploys a commit: integration in dev, end-to-end in staging, smoke in
 # production. Results are posted on the deployed commit as "integration / report", "e2e / report"
 # and "smoke / report", which the pipeline's quality gates read. In staging, when the change needs
 # it (performance: full), Lighthouse too: "performance / report".
@@ -6,7 +6,7 @@ name: post-deploy
 
 on:
   repository_dispatch:
-    types: [vrixel-deployed]
+    types: [valxel-deployed]
   workflow_dispatch:
     inputs:
       stage:
@@ -70,7 +70,7 @@ jobs:
           path: playwright-report/
           retention-days: 14
 
-  # Staging page performance, when the Vrixel SDLC says the change needs it: Lighthouse three times
+  # Staging page performance, when the Valxel SDLC says the change needs it: Lighthouse three times
   # against the deployed app (through the BFF), median LCP, TBT and CLS and the JavaScript actually
   # transferred, judged against the budget and the last passing run (the perf-baselines branch).
   performance:

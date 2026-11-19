@@ -6,7 +6,7 @@ updates:
     cooldown: { default-days: 7 } # newly published versions wait a week (security updates do not)
     groups:
       dev-dependencies: { dependency-type: development, update-types: [minor, patch] }
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 0
     # typescript-eslint supports TypeScript below 6.1; take a new TypeScript major once it does.
     ignore:
       - dependency-name: typescript
@@ -15,7 +15,9 @@ updates:
     directory: /
     schedule: { interval: weekly }
     cooldown: { default-days: 7 } # newly published versions wait a week (security updates do not)
+    open-pull-requests-limit: 0
   - package-ecosystem: docker
     directory: /
     schedule: { interval: weekly }
     cooldown: { default-days: 7 } # newly published versions wait a week (security updates do not)
+    open-pull-requests-limit: 0
